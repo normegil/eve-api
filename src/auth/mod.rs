@@ -4,6 +4,8 @@ use rand::Rng;
 use base64::*;
 use sha2::Digest;
 
+pub mod http_server;
+
 pub struct ApplicationAuthFlow {
     client_id: String,
     callback_url: String,
@@ -19,29 +21,29 @@ impl ApplicationAuthFlow {
         }
     }
 
-    pub fn connect_temp(&self) -> io::Result<()>{
-        let generated_id = uuid::Uuid::new_v4().to_string();
-        let scopes: Vec<String> = self.scopes.iter().map(|s| s.to_string()).collect();
-        let scopes = scopes.join(" ");
+    // pub fn connect_temp(&self) -> io::Result<()>{
+    //     let generated_id = uuid::Uuid::new_v4().to_string();
+    //     let scopes: Vec<String> = self.scopes.iter().map(|s| s.to_string()).collect();
+    //     let scopes = scopes.join(" ");
 
-        let (_, challenge_to_send) = generate_challenge();
+    //     let (_, challenge_to_send) = generate_challenge();
 
-        let url = format!(
-            "https://login.eveonline.com/v2/oauth/authorize/?response_type=code&code_challenge_method=S256&client_id={client_id}&redirect_uri={callback_uri}&scope={scope}&code_challenge={challenge}&state={generated_id}",
-            client_id=self.client_id,
-            callback_uri=urlencoding::encode(&self.callback_url),
-            scope=urlencoding::encode(&scopes),
-            generated_id=generated_id,
-            challenge=challenge_to_send,
-        );
+    //     let url = format!(
+    //         "https://login.eveonline.com/v2/oauth/authorize/?response_type=code&code_challenge_method=S256&client_id={client_id}&redirect_uri={callback_uri}&scope={scope}&code_challenge={challenge}&state={generated_id}",
+    //         client_id=self.client_id,
+    //         callback_uri=urlencoding::encode(&self.callback_url),
+    //         scope=urlencoding::encode(&scopes),
+    //         generated_id=generated_id,
+    //         challenge=challenge_to_send,
+    //     );
 
-        if let Err(e) = open::that(url) {
-            return Err(e);
-        }
+    //     if let Err(e) = open::that(url) {
+    //         return Err(e);
+    //     }
         
-        
 
-    }
+
+    // }
 }
 
 pub enum Scope {
