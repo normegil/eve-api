@@ -1,7 +1,6 @@
 use std::{net::TcpListener, net::TcpStream, io::{self, BufReader, BufRead, Write}, collections::HashMap};
 
 pub struct Server {
-    host: String,
     port: u16
 }
 
@@ -11,12 +10,12 @@ pub struct CodeResponse {
 }
 
 impl Server {
-    pub fn new(host: &str, port: u16) -> Server {
-        Server{ host: host.to_string(), port }
+    pub fn new(port: u16) -> Server {
+        Server{ port }
     }
 
     pub fn get_code(&self) -> io::Result<CodeResponse> {
-        let listener = TcpListener::bind(format!("{}:{}", self.host, self.port))?;
+        let listener = TcpListener::bind(format!("0.0.0.0:{}", self.port))?;
         let mut conn=listener.incoming().next().unwrap()?;
         
         let params = read_request(&conn)?;
