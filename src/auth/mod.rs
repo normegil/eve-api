@@ -2,23 +2,21 @@ use std::io;
 
 use rand::Rng;
 use base64::*;
-use serde::Deserialize;
 use sha2::Digest;
 
-use self::http_server::CodeResponse;
-
 mod http_server;
+mod tokens;
 
-pub struct ApplicationAuthFlow {
+pub struct Authenticator {
     client_id: String,
     callback_url: String,
     scopes: Vec<Scope>,
     port: Option<u16>,
 }
 
-impl ApplicationAuthFlow {
-    pub fn new(client_id: &str, callback_url: &str, scopes: Vec<Scope>) -> ApplicationAuthFlow {
-        ApplicationAuthFlow{
+impl Authenticator {
+    pub fn new(client_id: &str, callback_url: &str, scopes: Vec<Scope>) -> Authenticator {
+        Authenticator{
             client_id: client_id.to_string(), 
             callback_url: callback_url.to_string(), 
             scopes: scopes,
@@ -26,20 +24,16 @@ impl ApplicationAuthFlow {
         }
     }
 
-    pub fn with_listening_port(mut self, port: u16) -> ApplicationAuthFlow {
+    pub fn with_listening_port(mut self, port: u16) -> Authenticator {
         self.port = Some(port);
         self
     }
 
-    pub fn auth(&self) -> io::Result<()>{
+    pub fn authenticate(&self) -> io::Result<tokens::Tokens>{
         let (_, challenge_to_send) = generate_challenge();
         let code = self.request_code(&challenge_to_send)?;
-        let tokens = request_tokens(&code, &self.client_id, &challenge_to_send)?;
-        let key = request_key();
-
         
-
-        Ok(())
+        tokens::request_new(&code, &self.client_id, &challenge_to_send)
     }
 
     fn request_code(&self, challenge: &str) -> io::Result<String> {
@@ -91,78 +85,4 @@ fn generate_challenge() -> (String, String) {
     let hashed_challenge = hasher.finalize();
     let challenge_to_send = base64::encode_config(hashed_challenge, base64_config);
     (challenge, challenge_to_send)
-}
-
-fn request_tokens(code: &str, client_id: &str, challenge: &str) -> io::Result<AuthTokenResponseBody> {
-    let client = reqwest::blocking::Client::new();
-    let resp  = client
-        .post("https://login.eveonline.com/v2/oauth/token")
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .header("Host", "login.eveonline.com")
-        .body(format!(
-            "grant_type=authorization_code&code={code}&client_id={client_id}&code_verifier={challenge}", 
-            code=code,
-            client_id=client_id,
-            challenge=challenge,
-        ))
-        .send();
-    
-    let resp = match resp {
-        Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Error when trying to get auth token: {}", e))),
-        Ok(r) => r,
-    };
-    let body = match resp.text() {
-        Ok(b) => b,
-        Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Error when trying to read response body for auth token: {}", e))), 
-    };
-
-    match serde_json::from_str::<AuthTokenResponseBody>(&body) {
-        Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Error when trying to deserialize response body for auth token from json: {}", e))),
-        Ok(b) => Ok(b), 
-    }
-}
-
-fn request_key() -> io::Result<AuthTokenKey> {
-    let cli = reqwest::blocking::Client::new();
-    let resp = cli.get("https://login.eveonline.com/oauth/jwks").send();
-    let resp = match resp {
-        Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Error when trying to get auth token key for validation: {}", e))),
-        Ok(r) => r,
-    };
-    let body = match resp.text() {
-        Ok(b) => b,
-        Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Error when trying to read response body for auth token key for validation: {}", e))), 
-    };
-
-    let key = match serde_json::from_str::<AuthTokenKeyResponseBody>(&body) {
-        Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Error when trying to deserialize response body for auth token from json: {}", e))),
-        Ok(b) => {
-            let k = b.keys.iter().find(|b| b.kid == "JWT-Signature-Key");
-            match k {
-                None => return Err(io::Error::new(io::ErrorKind::Other, format!("No key found: {:?}", b))),
-                Some(k) => k.clone(),
-            }
-        }, 
-    };
-    Ok(key)
-}
-
-#[derive(Deserialize)]
-struct AuthTokenResponseBody {
-    token_type: String,
-    expires_in: i32,
-    access_token: String,
-    refresh_token: String,
-}
-
-#[derive(Deserialize, Debug)]
-struct AuthTokenKeyResponseBody {
-    keys: Vec<AuthTokenKey>
-}
-
-#[derive(Deserialize, Debug, Clone)]
-struct AuthTokenKey {
-    alg: String,
-    kid: String,
-    n: String
 }
