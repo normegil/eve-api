@@ -3,4 +3,4 @@ pipeline:
     image: rust
     commands:
       - rustup component add clippy
-      - cargo clippy
+      - cargo clippy -- -D warnings
