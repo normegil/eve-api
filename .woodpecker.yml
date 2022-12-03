@@ -1,0 +1,8 @@
+pipeline:
+  build:
+    image: rust
+    commands:
+      - rustup component add clippy
+      - cargo clippy -- -D warnings
+      - cargo build
+      - cargo test
