@@ -22,7 +22,7 @@ impl Server {
         
         let response_body = "Code received, you can close this tab now.";
         let response = format!("HTTP/1.1 200 OK\r\nContent-Lenght: {}\r\n\r\n{}", response_body.len(), response_body);
-        conn.write(response.as_bytes())?;
+        conn.write_all(response.as_bytes())?;
         conn.flush()?;
 
         Ok(params)
@@ -49,20 +49,20 @@ fn read_request(stream: &TcpStream) -> io::Result<CodeResponse>{
 }
 
 fn extract_parameters_from_path(first_line: &String) -> io::Result<HashMap<String, String>> {
-    let splitted_line: Vec<&str> = first_line.split(" ").collect();
+    let splitted_line: Vec<&str> = first_line.split(' ').collect();
     if splitted_line.len() != 3 {
         return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Invalid query line (number of chunk invalid:{}): '{}'", splitted_line.len(), first_line) ));
     }
     let path = splitted_line[1];
-    let splitted_path: Vec<&str> = path.split("?").collect();
+    let splitted_path: Vec<&str> = path.split('?').collect();
     if splitted_path.len() != 2 {
         return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Invalid query path (Too much or too few '?' character:{}): '{}'", splitted_path.len(), path) ));        
     }
 
     let mut parameters: HashMap<String, String> = HashMap::new();
     let parameters_chunk = splitted_path[1];
-    for parameter in parameters_chunk.split("&") {
-        let key_value: Vec<&str> = parameter.split("=").collect();
+    for parameter in parameters_chunk.split('&') {
+        let key_value: Vec<&str> = parameter.split('=').collect();
         if key_value.len() != 2 {
             return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Invalid parameter in query path(Too much or too few '=' character:{}): '{}'", key_value.len(), path) ));                
         }

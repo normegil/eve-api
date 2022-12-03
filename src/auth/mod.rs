@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, fmt::Display};
 
 use rand::Rng;
 use base64::*;
@@ -19,7 +19,7 @@ impl Authenticator {
         Authenticator{
             client_id: client_id.to_string(), 
             callback_url: callback_url.to_string(), 
-            scopes: scopes,
+            scopes,
             port: None, 
         }
     }
@@ -55,7 +55,7 @@ impl Authenticator {
 
         let code = http_server::Server::new(self.port.unwrap_or(35795))
             .get_code()?;
-        if generated_id.to_string() != code.state {
+        if generated_id != code.state {
             return Err(io::Error::new(io::ErrorKind::InvalidData, format!("Invalid returned state (expected:'{}';got:'{}')", generated_id, code.state)))
         }
         Ok(code.code)
@@ -67,10 +67,10 @@ pub enum Scope {
     PublicData
 }
 
-impl Scope {
-    fn to_string(&self) -> String {
-        String::from(match self {
-            PublicData => "publicData",
+impl Display for Scope {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match self {
+            Scope::PublicData => "publicData",
         })
     }
 }
