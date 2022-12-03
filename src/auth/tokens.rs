@@ -1,11 +1,29 @@
-use std::io;
+use std::{io};
 
 use jsonwebtoken::{Validation, DecodingKey, errors::ErrorKind};
+use reqwest::{Error};
 use serde::Deserialize;
 
 pub struct Tokens {
     pub access: AccessToken,
     pub refresh: RefreshToken
+}
+
+impl Tokens {
+    pub fn refresh(&self) -> io::Result<Tokens> {
+        let http = reqwest::blocking::Client::new();
+        let resp = http.post("https://login.eveonline.com/v2/oauth/token")
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .header("Host", "login.eveonline.com")
+            .body(format!(
+                "grant_type=refresh_token&refresh_token={refresh_token}&client_id={client_id}",
+                refresh_token=self.refresh.token,
+                client_id=self.refresh.client_id,
+            ))
+            .send();
+        
+        handle_token_response(resp, &self.refresh.client_id)
+    }
 }
 
 pub struct AccessToken(String);
@@ -35,7 +53,16 @@ impl AccessToken {
     }
 }
 
-pub struct RefreshToken(String);
+pub struct RefreshToken {
+    token: String,
+    client_id: String   
+}
+
+impl RefreshToken {
+    fn new(token: &str, client_id: &str) -> RefreshToken {
+        RefreshToken { token: token.to_string(), client_id: client_id.to_string() }
+    }
+}
 
 pub fn request_new(authentication_code: &str, client_id: &str, challenge: &str) -> io::Result<Tokens> {
     let http = reqwest::blocking::Client::new();
@@ -51,6 +78,10 @@ pub fn request_new(authentication_code: &str, client_id: &str, challenge: &str) 
         ))
         .send();
     
+    handle_token_response(resp, client_id)
+}
+
+fn handle_token_response(resp: Result<reqwest::blocking::Response, Error>, client_id: &str) -> io::Result<Tokens> {
     let resp = match resp {
         Err(e) => return Err(io::Error::new(io::ErrorKind::Other, format!("Error when trying to get auth token: {}", e))),
         Ok(r) => r,
@@ -69,7 +100,7 @@ pub fn request_new(authentication_code: &str, client_id: &str, challenge: &str) 
         return Err(e);
     }
 
-    Ok(Tokens { access: access_token, refresh: RefreshToken(body.refresh_token) })
+    Ok(Tokens { access: access_token, refresh: RefreshToken::new(&body.refresh_token, client_id) })
 }
 
 #[derive(Deserialize)]
