@@ -1,0 +1,10 @@
+pipeline:
+  test:
+    image: rust
+    commands:
+      - cargo build
+
+
+depends_on:
+  - lint
+  - test

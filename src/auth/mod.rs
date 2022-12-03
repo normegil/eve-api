@@ -49,9 +49,7 @@ impl Authenticator {
             challenge=challenge,
         );
 
-        if let Err(e) = open::that(url) {
-            return Err(e);
-        }
+        open::that(url)?;
 
         let code = http_server::Server::new(self.port.unwrap_or(35795))
             .get_code()?;
