@@ -7,6 +7,8 @@ use sha2::Digest;
 mod http_server;
 mod tokens;
 
+pub use tokens::Tokens;
+
 pub struct Authenticator {
     client_id: String,
     callback_url: String,

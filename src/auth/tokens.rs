@@ -4,6 +4,7 @@ use jsonwebtoken::{Validation, DecodingKey, errors::ErrorKind};
 use reqwest::{Error};
 use serde::Deserialize;
 
+#[derive(Debug, Clone)]
 pub struct Tokens {
     pub access: AccessToken,
     pub refresh: RefreshToken
@@ -26,6 +27,7 @@ impl Tokens {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct AccessToken(String);
 
 impl AccessToken {
@@ -53,6 +55,7 @@ impl AccessToken {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct RefreshToken {
     token: String,
     client_id: String   
